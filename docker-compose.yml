@@ -1,0 +1,32 @@
+version: "3.8"
+
+# 一键拉起 PostgreSQL + PostGIS（生产/有 Docker 权限的环境）
+# 启动：docker compose up -d
+# 然后把 .env 中 DATABASE_URL 指向：
+#   postgresql+psycopg2://osint:osint@localhost:5432/osint
+# 说明：应用代码的地理坐标使用 Float latitude/longitude 列 + haversine 半径查询，
+# 在 SQLite/PostgreSQL 上行为一致；PostGIS 扩展已在此启用，供后续直接使用
+# geography 类型 / ST_DWithin 等高级空间查询（二期可平滑迁移）。
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: military-osint-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: osint
+      POSTGRES_PASSWORD: osint
+      POSTGRES_DB: osint
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U osint -d osint"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:
